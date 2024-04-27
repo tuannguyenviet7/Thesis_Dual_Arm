@@ -18,7 +18,7 @@ from GUI_Receiver import Ui_MainWindow_4
 # Thông tin server
 # 0.tcp.ap.ngrok.io
 HOST = "0.tcp.ap.ngrok.io"
-SERVER_PORT = 14611
+SERVER_PORT = 13407
 FORMAT = "utf8"
 
 # option

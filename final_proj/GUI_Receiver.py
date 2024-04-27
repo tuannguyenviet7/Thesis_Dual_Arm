@@ -1,4 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QVBoxLayout, QTextEdit, QMessageBox
 import numpy as np
 from ikSolver import ikSolver, CombinedIKSolver
 import math
@@ -8,7 +9,28 @@ DH = {'theta': [0, 0, 0, 0, 0, 0],
       'a': [0, 335, 294, 0, 0, 0],
       'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
       'offset': [0, 0, 20, 0, 0, 0]}
+class ResultWindow(QMainWindow):
+    def __init__(self, left_result, right_result):
+        super().__init__()
+        self.setWindowTitle("IK Results")
+        self.setGeometry(100, 100, 400, 300)
 
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        layout = QVBoxLayout()
+        central_widget.setLayout(layout)
+
+        self.left_result_text = QTextEdit()
+        self.left_result_text.setPlainText(left_result)
+        self.left_result_text.setReadOnly(True)
+
+        self.right_result_text = QTextEdit()
+        self.right_result_text.setPlainText(right_result)
+        self.right_result_text.setReadOnly(True)
+
+        layout.addWidget(self.left_result_text)
+        layout.addWidget(self.right_result_text)
 class Ui_MainWindow_4(object):
     def __init__(self):
         #Create a global variable in class
@@ -261,8 +283,16 @@ class Ui_MainWindow_4(object):
             self.doubleSpinBox_11.value(),
             self.doubleSpinBox_12.value()
         ]
-        self.execute_IK(position_left_arm,orientation_left_arm,position_right_arm,orientation_right_arm,DH)
+        left_result, right_result = self.execute_IK(position_left_arm,orientation_left_arm,position_right_arm,orientation_right_arm,DH)
+        self.show_result_window(left_result, right_result)
     def solve_2_button_clicked(self):
+        if any(v is None for v in [self.x_left, self.y_left, self.z_left,
+                            self.roll_left, self.pitch_left, self.Yaw_left,
+                            self.x_right, self.y_right, self.z_right,
+                            self.roll_right, self.pitch_right, self.Yaw_right]):
+        # Show a message box indicating that data needs to be received first
+            QMessageBox.warning(None, "Warning", "Please receive data first.")
+            return
         position_left_arm_2 = [
             self.x_left,
             self.y_left,
@@ -283,7 +313,8 @@ class Ui_MainWindow_4(object):
             self.pitch_right,
             self.Yaw_right
         ]
-        self.execute_IK(position_left_arm_2,orientation_left_arm_2,position_right_arm_2,orientation_right_arm_2,DH)
+        left_result, right_result = self.execute_IK(position_left_arm_2, orientation_left_arm_2, position_right_arm_2, orientation_right_arm_2, DH)
+        self.show_result_window(left_result, right_result)
     def execute_IK(self, position_left, orientation_left, position_right, orientation_right,DH):
         left_arm_solver = ikSolver(DH)
         right_arm_solver = ikSolver(DH)  
@@ -304,15 +335,17 @@ class Ui_MainWindow_4(object):
         # Solve inverse kinematics for both arms simultaneously
         left_q, right_q = combined_solver.solveIK(left_arm_T06, right_arm_T06)
         if np.any(np.isnan(left_q)) or np.any(np.isnan(right_q)):
-            print("Flag = 1")
-        else:   
-            # Print the results
-            print("Left Arm IK Solution:")
-            print("Joint Angles (q):", left_q)
-
-            print("\nRight Arm IK Solution:")
-            print("Joint Angles (q):", right_q)
-
+            left_result = "Flag = 1"
+            right_result = "Flag = 1"
+            return left_result, right_result
+        else:
+            left_result = f"Left Arm IK Solution:\nJoint Angles (q): {left_q}\n"
+            right_result = f"\nRight Arm IK Solution:\nJoint Angles (q): {right_q}\n"
+            # print(left_result + right_result)
+            return left_result, right_result
+    def show_result_window(self, left_result, right_result):
+        self.result_window = ResultWindow(left_result, right_result)
+        self.result_window.show()    
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)

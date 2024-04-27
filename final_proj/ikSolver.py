@@ -145,39 +145,39 @@ class CombinedIKSolver():
 # # a = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 # # d = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 # # alpha = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
-# DH = {'theta': [0, 0, 0, 0, 0, 0],
-#       'd': [241, 173.5, -38, 0, 95, 45],
-#       'a': [0, 335, 294, 0, 0, 0],
-#       'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
-#       'offset': [0, 0, 20, 0, 0, 0]}
-# # Create instances of the ikSolver class for each arm
-# left_arm_solver = ikSolver(DH)
-# right_arm_solver = ikSolver(DH)
+DH = {'theta': [0, 0, 0, 0, 0, 0],
+      'd': [241, 173.5, -38, 0, 95, 45],
+      'a': [0, 335, 294, 0, 0, 0],
+      'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
+      'offset': [0, 0, 20, 0, 0, 0]}
+# Create instances of the ikSolver class for each arm
+left_arm_solver = ikSolver(DH)
+right_arm_solver = ikSolver(DH)
 
 
 
-# # Example position and orientation for left arm end effector
-# left_position = np.array([0.1, 0.2, 0.3])  # Example position for left arm
-# left_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for left arm
-# left_arm_T06 = left_arm_solver.create_Transformation_Matrix(left_position, left_orientation,DH['offset'])
+# Example position and orientation for left arm end effector
+left_position = np.array([0.1, 0.2, 0.3])  # Example position for left arm
+left_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for left arm
+left_arm_T06 = left_arm_solver.create_Transformation_Matrix(left_position, left_orientation,DH['offset'])
 
-# # Example position and orientation for right arm end effector
-# right_position = np.array([0.4, 0.5, 0.6])  # Example position for right arm
-# right_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for right arm
-# right_arm_T06 = right_arm_solver.create_Transformation_Matrix(right_position, right_orientation,DH['offset'])
+# Example position and orientation for right arm end effector
+right_position = np.array([0.4, 0.5, 0.6])  # Example position for right arm
+right_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for right arm
+right_arm_T06 = right_arm_solver.create_Transformation_Matrix(right_position, right_orientation,DH['offset'])
 
-# # Create combined IK solver
-# combined_solver = CombinedIKSolver(DH)
+# Create combined IK solver
+combined_solver = CombinedIKSolver(DH)
 
-# # Solve inverse kinematics for both arms simultaneously
-# left_q, right_q = combined_solver.solveIK(left_arm_T06, right_arm_T06)
+# Solve inverse kinematics for both arms simultaneously
+left_q, right_q = combined_solver.solveIK(left_arm_T06, right_arm_T06)
 
-# # Print the results
-# print("Left Arm IK Solution:")
-# print("Joint Angles (q):", left_q)
+# Print the results
+print("Left Arm IK Solution:")
+print("Joint Angles (q):", left_q)
 
-# print("\nRight Arm IK Solution:")
-# print("Joint Angles (q):", right_q)
+print("\nRight Arm IK Solution:")
+print("Joint Angles (q):", right_q)
 
 
 
