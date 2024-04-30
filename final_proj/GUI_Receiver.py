@@ -10,6 +10,8 @@ DH = {'theta': [0, 0, 0, 0, 0, 0],
       'a': [0, 335, 294, 0, 0, 0],
       'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
       'offset': [0, 0, 20, 0, 0, 0]}
+left_results = []
+right_results = []
 class Ui_MainWindow_4(object):
     def __init__(self):
         #Create variables in class
@@ -604,8 +606,19 @@ class Ui_MainWindow_4(object):
         ]
         orientation_right_arm = matrix_to_ur_euler(np.array(self.matrix_right))
         left_result, right_result = self.execute_IK(position_left_arm, orientation_left_arm, position_right_arm, orientation_right_arm, DH)
-        self.textBrs_box_left.setText("Left Arm Result:\n" + str(left_result))
-        self.textBrs_box_right.setText("Right Arm Result:\n" + str(right_result))
+        # Append results to lists
+        left_results.append(left_result)
+        right_results.append(right_result)
+
+        # Update text for both text browsers
+        self.update_text_browser(self.textBrs_box_left, left_results, "Left Arm Results:")
+        self.update_text_browser(self.textBrs_box_right, right_results, "Right Arm Results:")
+
+    def update_text_browser(self, text_browser, results, header):
+        text = header + "\n"
+        for result in results:
+            text += str(result) + "\n"
+        text_browser.setText(text)
     def execute_IK(self, position_left, orientation_left, position_right, orientation_right,DH):
         left_arm_solver = ikSolver(DH)
         right_arm_solver = ikSolver(DH)  
@@ -630,9 +643,11 @@ class Ui_MainWindow_4(object):
             right_result = "Flag = 1"
             return left_result, right_result
         else:
-            left_result = f"Left Arm IK Solution:\nJoint Angles (q): {left_q}\n"
-            right_result = f"\nRight Arm IK Solution:\nJoint Angles (q): {right_q}\n"
+            # left_result = f"Left Arm IK Solution:\nJoint Angles (q): {left_q}\n"
+            # right_result = f"\nRight Arm IK Solution:\nJoint Angles (q): {right_q}\n"
             # print(left_result + right_result)
+            left_result ="The equation describing the motion of the robot left arm has a solution"
+            right_result ="The equation describing the motion of the robot right arm has a solution"
             return left_result, right_result
 
 if __name__ == "__main__":
