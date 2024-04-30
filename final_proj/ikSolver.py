@@ -12,7 +12,6 @@ class ikSolver():
         self.a = DH['a']
         self.alpha = DH['alpha']
         self.offset = DH['offset']
-
     def create_Transformation_Matrix(self, position, orientation,offset):
         """
         :param position: 3x1 numpy array of the position, xyz
@@ -138,7 +137,13 @@ class CombinedIKSolver():
             left_q = self.left_solver.nearestQ(left_q, last_q[0])
             right_q = self.right_solver.nearestQ(right_q, last_q[1])
         return left_q, right_q
-    
+def matrix_to_ur_euler(matrix):
+    roll = np.arctan2(matrix[1, 0], matrix[0, 0])
+    pitch = np.arctan2(-matrix[2, 0], np.sqrt(matrix[2, 1]**2 + matrix[2, 2]**2))
+    yaw = np.arctan2(matrix[2, 1], matrix[2, 2])
+    array = ([roll, pitch, yaw])
+    return array
+  
     
 # # # Define DH parameters for each arm
 # # # For simplicity, assuming both arms have the same parameters
@@ -156,28 +161,31 @@ right_arm_solver = ikSolver(DH)
 
 
 
-# Example position and orientation for left arm end effector
-left_position = np.array([0.1, 0.2, 0.3])  # Example position for left arm
-left_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for left arm
-left_arm_T06 = left_arm_solver.create_Transformation_Matrix(left_position, left_orientation,DH['offset'])
+# # Example position and orientation for left arm end effector
+# left_position = np.array([0.1, 0.2, 0.3])  # Example position for left arm
+# orientation_matrix = np.array([[12, 0, 0],
+#                                [0, 0, 11],
+#                                [0, 13, 0]])
+# left_oirentaion = matrix_to_ur_euler(orientation_matrix)
+# left_arm_T06 = left_arm_solver.create_Transformation_Matrix(left_position,left_oirentaion ,DH['offset'])
 
-# Example position and orientation for right arm end effector
-right_position = np.array([0.4, 0.5, 0.6])  # Example position for right arm
-right_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for right arm
-right_arm_T06 = right_arm_solver.create_Transformation_Matrix(right_position, right_orientation,DH['offset'])
+# # Example position and orientation for right arm end effector
+# right_position = np.array([0.4, 0.5, 0.6])  # Example position for right arm
+# right_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for right arm
+# right_arm_T06 = right_arm_solver.create_Transformation_Matrix(right_position, left_oirentaion,DH['offset'])
 
-# Create combined IK solver
-combined_solver = CombinedIKSolver(DH)
+# # Create combined IK solver
+# combined_solver = CombinedIKSolver(DH)
 
-# Solve inverse kinematics for both arms simultaneously
-left_q, right_q = combined_solver.solveIK(left_arm_T06, right_arm_T06)
+# # Solve inverse kinematics for both arms simultaneously
+# left_q, right_q = combined_solver.solveIK(left_arm_T06, right_arm_T06)
 
-# Print the results
-print("Left Arm IK Solution:")
-print("Joint Angles (q):", left_q)
+# # Print the results
+# print("Left Arm IK Solution:")
+# print("Joint Angles (q):", left_q)
 
-print("\nRight Arm IK Solution:")
-print("Joint Angles (q):", right_q)
+# print("\nRight Arm IK Solution:")
+# print("Joint Angles (q):", right_q)
 
 
 

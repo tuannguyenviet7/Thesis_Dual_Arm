@@ -1,24 +1,28 @@
 import sys
 import socket
 import os
+import threading
+import time
+import pyrebase
 
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import (QApplication, QMainWindow,
+from PyQt5.QtWidgets import (QApplication, QAction, QMainWindow,
 QLabel, QWidget, QPushButton, QLineEdit, QVBoxLayout,
 QMessageBox, QStackedWidget, QFileDialog, QFormLayout, QDialog, QDialogButtonBox)
 from PyQt5.QtGui import QCloseEvent, QFont
-from PyQt5.QtCore import QFile, QTextStream, Qt, QRect
+from PyQt5.QtCore import QFile, QTextStream, Qt, QThread
 
 from sidebar import Ui_MainWindow
 from startpage import Ui_MainWindow_1
 from loginpage import Ui_MainWindow_2
 from signuppage import Ui_MainWindow_3
 from GUI_Receiver import Ui_MainWindow_4
+# from progressbar import Ui_Dialog
 
 # Thông tin server
 # 0.tcp.ap.ngrok.io
-HOST = "0.tcp.ap.ngrok.io"
-SERVER_PORT = 13407
+HOST = "192.168.0.103"
+SERVER_PORT = 9999
 FORMAT = "utf8"
 
 # option
@@ -29,7 +33,22 @@ GET = "get"
 LOGOUT = "logout"
 SENDF = "sendfile"
 SIGNUP = "signup"
+TEST = "test" 
 
+# Khởi tạo kết nối đến Firebase
+firebaseConfig = {
+                    "apiKey": "AIzaSyChBPQ6dvYqXNY0FyQ48bATRyKz8Kh9J3w",
+                    "authDomain": "objectdetection-87ddc.firebaseapp.com",
+                    "databaseURL": "https://objectdetection-87ddc-default-rtdb.firebaseio.com",
+                    "projectId": "objectdetection-87ddc",
+                    "storageBucket": "objectdetection-87ddc.appspot.com",
+                    "messagingSenderId": "952580339973",
+                    "appId": "1:952580339973:web:c50eec021a4b6289205f6c",
+                    "measurementId": "G-DF1804SSXP"
+                }
+
+firebase = pyrebase.initialize_app(firebaseConfig)
+db = firebase.database()
 
 # Khởi tạo kết nối tới Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,18 +76,20 @@ class KLTN(QStackedWidget):
                 pass
         else: 
             event.ignore()
+        QApplication.closeAllWindows()
+            
+        
 
 class StartPage(QMainWindow):
     def __init__(self):
         # Khởi tạo trang khởi đầu LoginPage
         super(StartPage, self).__init__()
-        
         self.ui_1 = Ui_MainWindow_1()
         self.ui_1.setupUi(self)
         
         self.ui_1.login_button.clicked.connect(self.openLoginPage)
         self.ui_1.signup_button.clicked.connect(self.openSignUpPage)
-            
+        
     def openLoginPage(self):
         loginpage = LoginPage()
         window.addWidget(loginpage)
@@ -189,7 +210,8 @@ class SideBarPage(QMainWindow):
         self.ui.setupUi(self)
         
         self.row = "0"
-
+        self.threads={}
+    
         self.ui.icon_only_widget.hide()
         self.ui.stackedWidget.setCurrentIndex(0)
         self.ui.home_btn_2.setChecked(True)
@@ -203,6 +225,58 @@ class SideBarPage(QMainWindow):
         self.ui.choose_button.clicked.connect(self.openChooseRow)
         self.ui.passdata_button.clicked.connect(self.openPassDataPage)
 
+        
+        self.ui.pushButton_2.clicked.connect(self.start_send_thread)
+        self.ui.pushButton_3.clicked.connect(self.start_recv_thread)
+        self.ui.pushButton_4.clicked.connect(self.stop_recv_thread)
+        self.ui.pushButton_5.clicked.connect(self.stop_send_thread)
+        
+    def start_send_thread(self):
+        self.threads[1] = ThreadClass1(parent=None, index=1)
+        self.threads[1].start()
+        self.threads[1].any_signal.connect(self.my_function1)
+        self.ui.pushButton_2.setEnabled(False)
+        self.ui.pushButton_5.setEnabled(True)
+    
+    def start_recv_thread(self):
+        self.threads[2] = ThreadClass2(parent=None, index=2)
+        self.threads[2].start()
+        self.threads[2].any_signal.connect(self.my_function2)
+        self.ui.pushButton_3.setEnabled(False)
+        self.ui.pushButton_4.setEnabled(True)
+    
+    def stop_send_thread(self):
+        self.threads[1].stop()
+        self.ui.pushButton_2.setEnabled(True)
+        self.ui.pushButton_5.setEnabled(False)
+    
+    def stop_recv_thread(self):
+        self.threads[2].stop()
+        self.ui.pushButton_3.setEnabled(True)
+        self.ui.pushButton_4.setEnabled(False)
+        
+    def my_function1(self, data):
+        data_ = data.split(",")
+        index = self.sender().index
+        if index == 1:
+            self.ui.lineEdit_11.setText(data_[0])
+            self.ui.lineEdit_5.setText(data_[1])
+            self.ui.lineEdit_4.setText(data_[2])
+            self.ui.lineEdit_3.setText(data_[3])
+            self.ui.lineEdit_6.setText(data_[4])
+            self.ui.lineEdit.setText(data_[5])
+    def my_function2(self, data):
+        data_ = data.split(",")
+        index = self.sender().index
+        if index == 2:
+            self.ui.lineEdit_12.setText(data_[0])
+            self.ui.lineEdit_8.setText(data_[1])
+            self.ui.lineEdit_9.setText(data_[2])
+            self.ui.lineEdit_10.setText(data_[3])
+            self.ui.lineEdit_7.setText(data_[4])
+            self.ui.lineEdit_2.setText(data_[5])
+        pass
+    
     def is_decimal(self, string):
         try: 
             float(string)
@@ -231,18 +305,28 @@ class SideBarPage(QMainWindow):
             
             client.send(file_name.encode(FORMAT))
             print(file_name.encode(FORMAT))
-            """
+            
+            client.recv(1024)
+            
             client.send(str(file_size).encode(FORMAT))
             print(str(file_size).encode(FORMAT))
             
+            client.recv(1024)
             
-            with open(self.file_name, "rb") as fs:    
-                data = fs.read()
-                client.sendall(data)
-            """
+            with open(self.file_name, "rb") as fs:  
+                c = 0
+                while c < file_size:  
+                    data = fs.read(1024)
+                    if not data:
+                        break
+                    client.sendall(data)
+                    c += len(data)
+                    print(c)
+
+            print("Done!")
             
         except:
-            print("Server is not responding")
+            print("Server is not responding (sendfile)")
        
     def sendData(self): 
         try:
@@ -262,7 +346,7 @@ class SideBarPage(QMainWindow):
                 msg = END
                 client.send(msg.encode(FORMAT))
         except:
-            print("Server is not responding")
+            print("Server is not responding (sendData)")
         
     def DataEntry(self):
         self.data = []
@@ -272,6 +356,7 @@ class SideBarPage(QMainWindow):
                       self.ui.uz_entry, self.ui.vz_entry, self.ui.wz_entry,
                       self.ui.px_entry, self.ui.py_entry, self.ui.pz_entry,
                       self.ui.length_entry, self.ui.width_entry, self.ui.height_entry):
+            
             if not field.text():
                 # print(f'{field.objectName()} cannot be empty')
                 QMessageBox.critical(
@@ -327,25 +412,38 @@ class SideBarPage(QMainWindow):
                     self.ui.width_entry_2.setText(data[13])
                     self.ui.height_entry_2.setText(data[14])
                     
-                    # data for passdatapage
+                    # Data for passdatapage
                     self.gui.textBrowser_1.setText(data[0])
+                    self.gui.x_left = float(data[0])
                     self.gui.textBrowser_2.setText(data[1])
+                    self.gui.y_left = float(data[1])
                     self.gui.textBrowser_3.setText(data[2])
+                    self.gui.z_left = float(data[2])
                     self.gui.textBrowser_4.setText(data[3])
+                    self.gui.pitch_left = float(data[3])
                     self.gui.textBrowser_5.setText(data[4])
+                    self.gui.roll_left = float(data[4])
                     self.gui.textBrowser_6.setText(data[5])
+                    self.gui.Yaw_left = float(data[5])
                     self.gui.textBrowser_7.setText(data[6])
+                    self.gui.x_right = float(data[6])
                     self.gui.textBrowser_8.setText(data[7])
+                    self.gui.y_right = float(data[7])
                     self.gui.textBrowser_9.setText(data[8])
+                    self.gui.z_right = float(data[8])
                     self.gui.textBrowser_10.setText(data[9])
+                    self.gui.roll_right = float(data[9])
                     self.gui.textBrowser_11.setText(data[10])
+                    self.gui.pitch_right = float(data[10])
                     self.gui.textBrowser_12.setText(data[11])
+                    self.gui.Yaw_right = float(data[11])
+
                     
                 else:
                     print("Not enough data!")
             
         except:
-            print("Server is not responding")   
+            print("Server is not responding (getData)")   
     
     def clientLogOut(self):
         try:
@@ -443,7 +541,7 @@ class AddDialog(QDialog):
 
         self.setupUI()
 
-
+        self.sender()
     def setupUI(self):
         '''Setup the Add Contact dialog's GUI.'''
         # Create line edits for data fields:
@@ -482,8 +580,66 @@ class AddDialog(QDialog):
             
         super().accept()
         
+class ThreadClass1(QThread):
+    any_signal = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None, index=0):
+        super(ThreadClass1, self).__init__(parent)
+        self.index = index
+        self.is_running = True
+    def getFirebaseData(self):
+        self.data = []
+        data_name = ['P_x', 'P_y', 'P_z', 'U_x', 'U_y', 'U_z']
+        
+        for name in data_name:
+            a = db.child(name).child('value').get().val()
+            self.data.append(str(a))
+
+        self.data = ",".join(self.data)
+        
+    def run(self):
+        print('Starting Thread ...', self.index)
+        try:
+            while True:
+                self.getFirebaseData()        
+                self.any_signal.emit(self.data)
+                print(self.data)
+
+                client.send(TEST.encode(FORMAT))
+                client.send(self.data.encode(FORMAT))
+                
+                time.sleep(0.5)
+        except:
+            print('Error!')
+    
+    def stop(self):
+        self.is_running = False
+        print('Stopping Thread ...', self.index)
+        self.terminate()
+
+class ThreadClass2(QThread):
+    any_signal = QtCore.pyqtSignal(str)
+    def __init__(self, parent=None, index=0):
+        super(ThreadClass2, self).__init__(parent)
+        self.index = index
+        self.is_running = True
+        
+    def run(self):
+        print('Starting Thread ...', self.index)
+        try:
+            while True:
+                cnt = client.recv(1024).decode(FORMAT)
+                print(cnt)
+                self.any_signal.emit(cnt)
+        except:
+            print('Error!')
+    
+    def stop(self):
+        self.is_running = False
+        print('Stopping Thread ...', self.index)
+        self.terminate()
+        
 app = QApplication(sys.argv)
-style_file = QFile("final_proj/style.qss")
+style_file = QFile("style.qss")
 style_file.open(QFile.ReadOnly | QFile.Text)
 style_stream = QTextStream(style_file)
 app.setStyleSheet(style_stream.readAll())
