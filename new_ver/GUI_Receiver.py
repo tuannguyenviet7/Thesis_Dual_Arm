@@ -2,8 +2,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QVBoxLayout, QTextEdit, QMessageBox
 import numpy as np
 from ikSolver import *
-
+from PyQt5.QtCore import QThread, pyqtSignal
 import math
+import subprocess
 from data import *
 DH = {'theta': [0, 0, 0, 0, 0, 0],
       'd': [241, 173.5, -38, 0, 95, 45],
@@ -14,7 +15,37 @@ left_results = []
 right_results = []
 best_left_q = None
 best_right_q = None
+class OnlineThread(QThread):
+    finished = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(OnlineThread, self).__init__(parent)
+        self.running = False
+
+    def run(self):
+        self.running = True
+        while self.running:
+            # Call the online_button_clicked function
+            self.online_button_clicked()
+
+            # Increase position values by 0.1
+            position_receive[0] += 0.1
+            position_receive[1] += 0.1
+            position_receive[2] += 0.1
+
+            # Wait for a while before the next execution
+            self.msleep(500)  # 500 milliseconds
+
+        # Emit the finished signal when the thread completes
+        self.finished.emit()
+
+    def stop(self):
+        self.running = False
+
+    
+
 class Ui_MainWindow_4(object):
+    
     def __init__(self):
         #Create variables in class
         self.x_left = None
@@ -496,6 +527,7 @@ class Ui_MainWindow_4(object):
 
         self.pushButton_Receive.clicked.connect(self.receive_button_clicked)
         self.pushButton_Solve.clicked.connect(self.solve_button_clicked)
+        self.pushButton_Online.clicked.connect(self.online_button_clicked)
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -544,6 +576,77 @@ class Ui_MainWindow_4(object):
         self.pushButton_38.setText(_translate("MainWindow", "Height"))
         self.pushButton_39.setText(_translate("MainWindow", "Length"))
         self.pushButton_Online.setText(_translate("MainWindow", "Online"))
+    def online_button_clicked(self):
+        subprocess.Popen(['python', 'test1.py'])
+            # Update position_receive and orientation_matrix_receive (example values)
+        self.x_left = position_receive[0]
+        self.y_left = position_receive[1]
+        self.z_left = position_receive[2]
+        
+        for i in range(len(orientation_matrix_receive)):
+            for j in range(len(orientation_matrix_receive[0])):
+                self.matrix_left[i][j] = orientation_matrix_receive[i][j]
+        # Assigning values from arrays to variables for right arm
+        self.x_right = position_receive[0]
+        self.y_right = position_receive[1]
+        self.z_right = position_receive[2]
+        for i in range(len(orientation_matrix_receive)):
+            for j in range(len(orientation_matrix_receive[0])):
+                self.matrix_right[i][j] = orientation_matrix_receive[i][j]
+        #Display data of left arm
+        self.textBrs_PX_left.setText(str(self.x_left))
+        self.textBrs_PY_left.setText(str(self.y_left))
+        self.textBrs_PZ_left.setText(str(self.z_left))
+        self.textBrs_UX_left.setText(str(self.matrix_left[0][0]))
+        self.textBrs_VX_left.setText(str(self.matrix_left[0][1]))
+        self.textBrs_WX_left.setText(str(self.matrix_left[0][2]))
+        self.textBrs_UY_left.setText(str(self.matrix_left[1][0]))
+        self.textBrs_VY_left.setText(str(self.matrix_left[1][1]))
+        self.textBrs_WY_left.setText(str(self.matrix_left[1][2]))
+        self.textBrs_UZ_left.setText(str(self.matrix_left[2][0]))
+        self.textBrs_VZ_left.setText(str(self.matrix_left[2][1]))
+        self.textBrs_WZ_left.setText(str(self.matrix_left[2][2]))
+
+        #Display data of right
+        self.textBrs_PX_right.setText(str(self.x_right))
+        self.textBrs_PY_right.setText(str(self.y_right))
+        self.textBrs_PZ_right.setText(str(self.z_right))
+        self.textBrs_UX_right.setText(str(self.matrix_right[0][0]))
+        self.textBrs_VX_right.setText(str(self.matrix_right[0][1]))
+        self.textBrs_WX_right.setText(str(self.matrix_right[0][2]))
+        self.textBrs_UY_right.setText(str(self.matrix_right[1][0]))
+        self.textBrs_VY_right.setText(str(self.matrix_right[1][1]))
+        self.textBrs_WY_right.setText(str(self.matrix_right[1][2]))
+        self.textBrs_UZ_right.setText(str(self.matrix_right[2][0]))
+        self.textBrs_VZ_right.setText(str(self.matrix_right[2][1]))
+        self.textBrs_WZ_right.setText(str(self.matrix_right[2][2]))
+        if any(v is None for v in [self.x_left, self.y_left, self.z_left,
+                            self.matrix_left,
+                            self.x_right, self.y_right, self.z_right,
+                            self.matrix_right]):
+        # Show a message box indicating that data needs to be received first
+            QMessageBox.warning(None, "Warning", "Please receive data first.")
+            return
+        position_left_arm = [
+            self.x_left,
+            self.y_left,
+            self.z_left
+        ]
+        orientation_left_arm = matrix_to_ur_euler(np.array(self.matrix_left))
+        position_right_arm = [
+            self.x_right,
+            self.y_right,
+            self.z_right
+        ]
+        orientation_right_arm = matrix_to_ur_euler(np.array(self.matrix_right))
+        left_result, right_result = self.execute_IK(position_left_arm, orientation_left_arm, position_right_arm, orientation_right_arm, DH)
+        # Append results to lists
+        left_results.append(left_result)
+        right_results.append(right_result)
+
+        # Update text for both text browsers
+        self.update_text_browser(self.textBrs_box_left, left_results, "Left Arm Results:")
+        self.update_text_browser(self.textBrs_box_right, right_results, "Right Arm Results:")      
     def receive_button_clicked(self):
         # Assigning values from arrays to variables for left arm
         self.x_left = position_receive[0]

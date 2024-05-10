@@ -23,7 +23,7 @@ class KinematicsThread(QThread):
         self.running = True
         while self.running:
             # Khởi tạo các góc khớp ngẫu nhiên cho cánh tay trái và phải
-            left_joints = np.asarray([-1.85684777,  3.00030656,  2.27273774 , 2.86698879 , 1.57079633 ,-1.28474489]) # Ngẫu nhiên từ -pi đến pi
+            left_joints = np.asarray([-2.03444394 , 2.98909208 , 2.28503782 , 3.04349935  ,1.57079633 ,-1.10714872]) # Ngẫu nhiên từ -pi đến pi
             right_joints = np.random.rand(6) * 2 * np.pi - np.pi  # Ngẫu nhiên từ -pi đến pi
             # Gửi tín hiệu với các góc khớp đã khởi tạo
             self.updated.emit(left_joints, right_joints)
