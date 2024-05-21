@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import time
 import numpy as np
 import math
-from ikSolver import *
+from IkSolver import *
+
 
 
 class OpenGLWidget(QOpenGLWidget):
@@ -164,30 +165,21 @@ class MainPage(QMainWindow):
         else:
             # q1_l,q2_l,q3_l,q4_l,q5_l,q6_l = best_left_q[0],best_left_q[1],best_left_q[2],best_left_q[3],best_left_q[4],best_left_q[5]
             #right arm
-            right_position = np.array([ 0,4.2662901597287854,-0.5400000000000003])  
-            print(self.z_ttt)
-            right_oirentaion = np.array([-np.pi/6, 0 ,0])
-            orientation_matrix = np.array([[-0.00774613047307292, 0.134067170988265, -0.990941971623918],
-                                    [0.762583016405143, -0.640231325209606, -0.0925796592712704],
-                                    [-0.646843984708157, -0.756392651923295, -0.0972780322751131]])
-            right_temp_ori = matrix_to_ur_euler(orientation_matrix)
-            right_arm_T06 = left_arm_solver.create_Transformation_Matrix(right_position,right_oirentaion )
+
             #left
-            left_position = np.array([0, 0, 0])  
-            left_oirentaion = np.array([-np.pi/4, 0.5, 0.6])
-            left_arm_T06 = left_arm_solver.create_Transformation_Matrix(left_position,left_oirentaion )
-            #Solve for both arm
-            combined_solver = CombinedIKSolver(DH)
-            left_q, right_q = combined_solver.solveIK_1(left_arm_T06, right_arm_T06)
-            if(self.check_status == False):
-                best_left_q = left_arm_solver.nearestQ(left_q,None)
-                best_right_q = right_arm_solver.nearestQ(right_q,None)
-                self.check_status = 2
+            left_position = np.array([0.04, 0.18, 0.18])  # Example position for left arm
+            orientation_matrix = np.array([[0.847, -0.117, 0.56],
+                                        [0.49, 0.958, -0.704],
+                                        [-0.207, 0.261, 0.437]])
+            ori_array = matrix_to_ur_euler(orientation_matrix)
+            T = ik.create_Transformation_Matrix(left_position,ori_array)
+            
+            if(self.check_status == True):
+                q, qs = ik.solveIK(T,np.array(theta1))
+                self.check_status == 2
             else:
-                best_right_q = right_arm_solver.nearestQ(right_q,self.last_q_both[0])
-                best_left_q = left_arm_solver.nearestQ(left_q,self.last_q_both[1])
-            theta1 = [best_right_q[0],best_right_q[1],best_right_q[2],best_right_q[3],best_right_q[4],best_right_q[5]]
-            theta2 = [best_left_q[0],best_left_q[1],best_left_q[2],best_left_q[3],best_left_q[4],best_left_q[5]]
+                q,qs = ik.solveIK(T,q)
+                theta1 = [q[0],q[1],q[2],q[3],q[4],q[5]]
         self.last_q_both = np.array([theta1,theta2])
         end_effector_position1 = FK(dh_params, theta1, initial_translation=(1, 0, 0))  # Right arm starts at (1, 0, 0)
         end_effector_position2 = FK(dh_params, theta2, initial_translation=(-1, 0, 0))  # Left arm starts at (0, 0, 0)
