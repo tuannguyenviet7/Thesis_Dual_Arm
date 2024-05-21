@@ -1,35 +1,29 @@
-
+import numpy as np
 from scipy.spatial.transform import Rotation as R
 from sympy import symbols, cos, sin, pi, simplify, pprint, tan, expand_trig, sqrt, trigsimp, atan2
-from sympy.matrices import Matrix
-
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import time
-import numpy as np
-import math
-
+# Inverse kinematic solver for a UR robot
+# Based on Kinematics of a UR5, by Rasmus Skovgaard Andersen
+# http://rasmusan.blog.aau.dk/files/ur5_kinematics.pdf
 
 class ikSolver():
-    def __init__(self,DH):
+    def __init__(self, a, d, alpha):
 
         # Initialize the DH parameters of the robot
-        self.theta = DH['theta']
-        self.d = DH['d']
-        self.a = DH['a']
-        self.alpha = DH['alpha']
+        self.a = a
+        self.d = d
+        self.alpha = alpha
 
     def create_Transformation_Matrix(self, position, orientation):
         """
+
         :param position: 3x1 numpy array of the position, xyz
         :param orientation: 3x1 numpy array of the orientation in euler angles xyz
-        :param offset: 3x1 numpy array representing the offset from the TCP to the end effector frame
-        :return: homogeneous transformation matrix
+        :return: homogenous transformation matrix
         """
         T = np.eye(4)
         rot = R.from_euler('xyz', orientation)
         T[0:3, 0:3] = rot.as_matrix()
-        T[0:3, 3] = position 
+        T[0:3, 3] = position
         return T
 
     def DHLink(self, alpha, a, d, angle):
@@ -49,15 +43,11 @@ class ikSolver():
         weights = np.array([6, 5, 4, 3, 2, 1])
         best_q = np.zeros(6)
         bestConfDist = np.inf
-        if last_q is not None:
-            for q in q_list:
-                confDist = np.sum(((q - last_q) * weights)**2)
-                if confDist < bestConfDist:
-                    bestConfDist = confDist
-                    best_q = q
-        else:
-            # If last_q is None, return the first configuration in the list
-            best_q = q_list[0]
+        for q in q_list:
+            confDist = np.sum(((q - last_q) * weights)**2)
+            if confDist < bestConfDist:
+                bestConfDist = confDist
+                best_q = q
         return np.asarray(best_q)
 
     def solveIK(self, T06, *last_q):
@@ -135,29 +125,13 @@ class ikSolver():
             return q, theta
         else:
             return theta
-class CombinedIKSolver():
-    def __init__(self,DH):
-        self.left_solver = ikSolver(DH)
-        self.right_solver = ikSolver(DH)
-
-    def solveIK_1(self, left_T06, right_T06, *last_q):
-        left_q = self.left_solver.solveIK(left_T06)
-        right_q = self.right_solver.solveIK(right_T06)
-        if last_q:
-            left_q = self.left_solver.nearestQ(left_q, last_q[1])
-            right_q = self.right_solver.nearestQ(right_q, last_q[0])
-        return left_q, right_q
 def matrix_to_ur_euler(matrix):
     roll = np.arctan2(matrix[1, 0], matrix[0, 0])
     pitch = np.arctan2(-matrix[2, 0], np.sqrt(matrix[2, 1]**2 + matrix[2, 2]**2))
     yaw = np.arctan2(matrix[2, 1], matrix[2, 2])
     array = ([roll, pitch, yaw])
-    return array
-dh_params = {'a': [0, 3.35, 2.94, 0, 0, 0],
-             'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
-             'd': [2.41, 1.735, -0.38, 0, 0.95, 0.45],
-             'offset': [0, 0, 0.2, 0, 0, 0]}
-
+    return array      
+#Foward Solver
 def HTM(dh_params, i, theta):
     theta_i = theta[i]
     a_i = dh_params['a'][i]
@@ -206,50 +180,26 @@ def FK(dh_params, theta, initial_translation=(0, 0, 0)):
             positions[2].append(z)
     
     return positions
+#DH table
+dh_params = {'a': [0, 3.35, 2.94, 0, 0, 0],
+             'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
+             'd': [2.41, 1.735, -0.38, 0, 0.95, 0.45],
+             'offset': [0, 0, 0.2, 0, 0, 0]}
+#example for position and orientation
+
+left_position = np.array([0.04, 0.18, 0.18])  # Example position for left arm
+orientation_matrix = np.array([[0.847, -0.117, 0.56],
+                               [0.49, 0.958, -0.704],
+                               [-0.207, 0.261, 0.437]])
+ori_array = matrix_to_ur_euler(orientation_matrix)
+last_q = np.array([3.6,1.74,0.5,-2.34,1.19,-2.395])
+a = np.array([0, 3.35, 2.94, 0, 0, 0])
+d = np.array([2.41, 1.735, -0.38, 0, 0.95, 0.45])
+alpha = np.array( [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0])
+
+ik = ikSolver(a, d, alpha)
+T = ik.create_Transformation_Matrix(left_position,ori_array)
+
+
+
     
-# # # Define DH parameters for each arm
-# # # For simplicity, assuming both arms have the same parameters
-# # a = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
-# # d = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-# # alpha = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
-DH = {'theta': [0, 0, 0, 0, 0, 0],
-      'd': [2.41, 1.735, -0.38, 0, 0.95, 0.45],
-      'a': [0, 3.35, 2.94, 0, 0, 0],
-      'alpha': [np.pi / 2, 0, 0, -np.pi / 2, np.pi / 2, 0],
-      'offset': [0, 0, 0.20, 0, 0, 0]}
-# Create instances of the ikSolver class for each arm
-left_arm_solver = ikSolver(DH)
-right_arm_solver = ikSolver(DH)
-
-
-
-# # Example position and orientation for left arm end effector
-# left_position = np.array([-7.34, 2.77, 2.19])  # Example position for left arm
-# orientation_matrix = np.array([[0.963, 0.022, -0.574],
-#                                [0.963, 0.996, -0.353],
-#                                [0.193, 0.085, 0.739]])
-
-# left_oirentaion = matrix_to_ur_euler(orientation_matrix)
-# left_arm_T06 = left_arm_solver.create_Transformation_Matrix(left_position,left_oirentaion )
-
-# # Example position and orientation for right arm end effector
-# right_position = np.array([0.04, -0.05, 1.6])  # Example position for right arm
-# right_orientation = np.array([0.0, 0.0, 0.0])  # Example orientation for right arm
-# right_arm_T06 = right_arm_solver.create_Transformation_Matrix(right_position, left_oirentaion)
-
-# # Create combined IK solver
-
-
-# Solve inverse kinematics for both arms simultaneously
-# Solve inverse kinematics for both arms simultaneously
-
-
-# Choose the best solution based on minimum joint movement
-# best_left_q = left_arm_solver.nearestQ(left_q, None)
-# best_right_q = right_arm_solver.nearestQ(right_q, None)
-# q1,q2,q3,q4,q5,q6 = best_left_q[0],best_left_q[1],best_left_q[2],best_left_q[3],best_left_q[4],best_left_q[5]
-
-
-
-
-
